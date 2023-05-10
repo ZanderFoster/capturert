@@ -2,6 +2,7 @@ import time
 import mss
 import cv2
 import numpy as np
+from ultralytics import YOLO
 
 # Get information of monitor 2
 monitor_number = 1
@@ -11,6 +12,9 @@ capture_height = 320
 # Initialize the FPS counter
 fps_start_time = time.time()
 fps_frame_count = 0
+
+#Select CV Model
+model = YOLO('YOLOv8s.pt')
 
 # Create an MSS instance
 with mss.mss() as sct:
@@ -29,9 +33,19 @@ with mss.mss() as sct:
 
         # Convert the screenshot to a numpy array
         frame = np.array(screenshot)
+        
+        # Convert the frame to 3 channels if it has 4 channels
+        if frame.shape[2] == 4:
+            frame = frame[:, :, :3]
+        
+        # Run CV model on the screenshot
+        results = model(frame, device=0, line_width=1, conf=0.85)
 
-        # Display the frame
-        cv2.imshow("Screen Capture", frame)
+        # Anotate the bounding boxes
+        annotated_frame = results[0].plot()
+    
+        # Display the annotated frame
+        cv2.imshow('Computer Vision', annotated_frame)
 
         # Calculate and display the FPS
         fps_frame_count += 1
@@ -41,7 +55,7 @@ with mss.mss() as sct:
             print("FPS:", round(fps, 2))
             fps_start_time = fps_current_time
             fps_frame_count = 0
-        time.sleep(0.013)
+        #time.sleep(0.013)
         # Exit if 'q' is pressed
         if cv2.waitKey(1) == ord("q"):
             break
